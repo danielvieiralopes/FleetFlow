@@ -1,10 +1,17 @@
-﻿using FleetFlow.Infrastructure.Persistence;
+﻿using FleetFlow.Api.Workers;
+using FleetFlow.Application.Interfaces;
+using FleetFlow.Infrastructure.Persistence;
+using FleetFlow.Tests.Integration.Helpers;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.VisualStudio.TestPlatform.TestHost;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
+using Moq;
+using RabbitMQ.Client;
 using Testcontainers.PostgreSql;
 
 namespace FleetFlow.Tests.Integration;
@@ -31,18 +38,43 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>, IAsy
     {
         builder.ConfigureTestServices(services =>
         {
-            // Remove a configuração do DbContext original da API.
-            var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<FleetFlowDbContext>));
-            if (descriptor is not null)
-            {
-                services.Remove(descriptor);
-            }
+            // --- 1. REMOVER DEPENDÊNCIAS EXTERNAS E CONFIGURAÇÕES REAIS ---
+            services.RemoveAll(typeof(DbContextOptions<FleetFlowDbContext>));
+            services.RemoveAll(typeof(IConnection));
+            services.RemoveAll(typeof(IStorageService));
+            services.RemoveAll(typeof(IMessageBus));
+            services.RemoveAll(typeof(IHostedService));
 
-            // Adiciona um novo DbContext que usa a connection string do nosso contêiner de teste.
+            // Remove a configuração de autenticação JWT original.
+            services.RemoveAll(typeof(IAuthenticationService));
+            services.RemoveAll(typeof(IAuthenticationHandler));
+
+            // --- 2. ADICIONAR SERVIÇOS DE TESTE ---
+            // Adiciona um DbContext que usa o contêiner de teste.
             services.AddDbContext<FleetFlowDbContext>(options =>
             {
                 options.UseNpgsql(_dbContainer.GetConnectionString());
             });
+
+            // Adiciona mocks para os serviços que não queremos testar.
+            services.AddSingleton(new Mock<IStorageService>().Object);
+            services.AddSingleton(new Mock<IMessageBus>().Object);
+
+            // Adiciona um manipulador de autenticação falso e DEFINE-O COMO PADRÃO.
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = "TestScheme";
+                options.DefaultChallengeScheme = "TestScheme";
+                options.DefaultScheme = "TestScheme";
+            })
+                .AddScheme<AuthenticationSchemeOptions, FakeAuthHandler>("TestScheme", _ => { });
+
+
+            // --- 3. PREPARAR O BANCO DE DADOS DE TESTE ---
+            var sp = services.BuildServiceProvider();
+            using var scope = sp.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<FleetFlowDbContext>();
+            dbContext.Database.Migrate();
         });
     }
 
