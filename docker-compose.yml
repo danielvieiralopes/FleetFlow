@@ -1,0 +1,66 @@
+
+version: '3.8'
+
+services:
+  # Serviço do Banco de Dados PostgreSQL
+  db:
+    image: postgres:15
+    container_name: fleetflow-db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=FleetFlowDb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=P@ssw0rd # Use a mesma senha do seu appsettings.json
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Serviço de Mensageria RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: fleetflow-rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"   # Porta para a aplicação se conectar
+      - "15672:15672" # Porta para a interface de gerenciamento web
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+
+  # Serviço de Storage de Objetos MinIO (compatível com S3)
+  minio:
+    image: minio/minio
+    container_name: fleetflow-minio
+    restart: always
+    ports:
+      - "9000:9000"   # Porta da API do MinIO
+      - "9001:9001"   # Porta da console web do MinIO
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - miniodata:/data
+
+  # Serviço da nossa API
+  api:
+    container_name: fleetflow-api
+    build:
+      context: .
+      dockerfile: src/FleetFlow.Api/Dockerfile # Precisaremos criar este Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      # A connection string agora aponta para o nome do serviço 'db' no Docker
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=FleetFlowDb;Username=postgres;Password=P@ssw0rd
+    depends_on:
+      - db
+      - rabbitmq
+      - minio
+
+volumes:
+  pgdata:
+  miniodata:

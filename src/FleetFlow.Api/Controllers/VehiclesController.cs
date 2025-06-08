@@ -75,4 +75,22 @@ public class VehiclesController : ControllerBase
         await _mediator.Send(command);
         return NoContent();
     }
+
+    [HttpPost("{id:guid}/file")]
+    [Authorize(Roles = "vehicle-admin")]
+    public async Task<IActionResult> RequestUpload(Guid id, [FromBody] RequestUploadPayload payload)
+    {
+        var command = new RequestUploadCommand(id, payload.FileName, payload.FileMimeType);
+        var result = await _mediator.Send(command);
+        return Ok(result);
+    }
+    public record RequestUploadPayload(string FileName, string FileMimeType);
+
+    [HttpGet("{id:guid}/file")]
+    [Authorize(Roles = "vehicle-read")]
+    public async Task<IActionResult> GetVehicleFiles(Guid id)
+    {
+        var documents = await _mediator.Send(new GetDocumentsByVehicleIdQuery(id));
+        return Ok(new { errors = new List<string>(), result = documents });
+    }
 }

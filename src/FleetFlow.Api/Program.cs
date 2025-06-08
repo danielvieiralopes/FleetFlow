@@ -3,9 +3,15 @@ using FleetFlow.Application.Interfaces;
 using FleetFlow.Infrastructure.Persistence;
 using FleetFlow.Infrastructure.Persistence.Repositories;
 using FleetFlow.Infrastructure.Security;
+using FleetFlow.Infrastructure.Messaging;
+using FleetFlow.Infrastructure.Storage;
+using Minio;
+using RabbitMQ.Client;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using FleetFlow.Api.Workers;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,12 +20,37 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<FleetFlowDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// Registrar as implementações dos repositórios para injeção de dependência.
-// Sempre que uma classe pedir um IUserRepository, o container de DI fornecerá uma instância de UserRepository.
+// Configurar o cliente Minio como Singleton
+builder.Services.AddSingleton<IMinioClient>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    return new MinioClient()
+        .WithEndpoint(config["MinioSettings:Endpoint"])
+        .WithCredentials(config["MinioSettings:AccessKey"], config["MinioSettings:SecretKey"])
+        .Build();
+});
+
+// Configurar a conexão do RabbitMQ como Singleton
+builder.Services.AddSingleton<IConnection>(sp =>
+{
+    var factory = new ConnectionFactory()
+    {
+        HostName = builder.Configuration["RabbitMqSettings:Hostname"],
+        UserName = builder.Configuration["RabbitMqSettings:Username"],
+        Password = builder.Configuration["RabbitMqSettings:Password"]
+    };
+    return factory.CreateConnection();
+});
+
+// serviços de repositório e serviços de aplicação
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IStorageService, MinioStorageService>();
+builder.Services.AddScoped<IMessageBus, RabbitMqService>();
+builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
+builder.Services.AddHostedService<DocumentProcessorWorker>();
 
 // Adicionar MediatR (CQRS)
 builder.Services.AddMediatR(cfg =>
