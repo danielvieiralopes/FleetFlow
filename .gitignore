@@ -1,0 +1,68 @@
+# Arquivo gerado pelo https://github.com/github/gitignore/blob/main/Dotnet.gitignore
+# Editado para cobrir casos comuns de desenvolvimento .NET
+
+## Ignorar saídas de compilação
+[Bb]in/
+[Oo]bj/
+
+## Ignorar arquivos gerados por IDEs e ferramentas
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## Ignorar saídas de ferramentas de build e teste
+TestResults/
+*.DotSettings
+*.idea/
+*.project.json
+*.lock.json
+project.lock.json
+
+## Ignorar arquivos de configuração local
+secrets.json
+appsettings.Development.json
+
+## Ignorar arquivos do sistema operacional
+# Mac
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+
+## Ignorar diretórios de pacotes
+# pacotes NuGet, NPM, etc.
+**/[Pp]ackages/
+**/[Nn]ode_modules/
+**/[Jj]spm_packages/
+**/[Ww]eb[Rr]oot/[Bb]ower/
+
+## Ignorar arquivos de log e cache
+*.log
+*.log.*
+*.tlog
+*.psess
+*.vsp
+*.vspx
+*.sap
+*.svclog
+*.zip
+
+## Ignorar arquivos específicos do Entity Framework
+*.mdf
+*.ldf
+*.sdf
+
+## Ignorar arquivos do Rider
+.idea/
+*.sln.iml
+
+## Ignorar arquivos do Resharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
