@@ -1,5 +1,4 @@
-
-version: '3.8'
+# Localização do Ficheiro: /docker-compose.yml (na raiz do projeto)
 
 services:
   # Serviço do Banco de Dados PostgreSQL
@@ -15,6 +14,11 @@ services:
       - POSTGRES_PASSWORD=P@ssw0rd # Use a mesma senha do seu appsettings.json
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d FleetFlowDb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Serviço de Mensageria RabbitMQ
   rabbitmq:
@@ -27,6 +31,12 @@ services:
     environment:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
+    # Adicionamos uma verificação de saúde para garantir que o RabbitMQ está pronto.
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   # Serviço de Storage de Objetos MinIO (compatível com S3)
   minio:
@@ -42,13 +52,18 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Serviço da nossa API
   api:
     container_name: fleetflow-api
     build:
       context: .
-      dockerfile: src/FleetFlow.Api/Dockerfile # Precisaremos criar este Dockerfile
+      dockerfile: src/FleetFlow.Api/Dockerfile
     ports:
       - "8080:8080"
     environment:
@@ -56,10 +71,16 @@ services:
       - ASPNETCORE_URLS=http://+:8080
       # A connection string agora aponta para o nome do serviço 'db' no Docker
       - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=FleetFlowDb;Username=postgres;Password=P@ssw0rd
+      - RabbitMqSettings__Hostname=rabbitmq # Aponta para o serviço do RabbitMQ
+      - MinioSettings__Endpoint=minio:9000 # Aponta para o serviço do MinIO
+    # A API agora espera que os serviços de que depende estejam "saudáveis" antes de arrancar.
     depends_on:
-      - db
-      - rabbitmq
-      - minio
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
 
 volumes:
   pgdata:

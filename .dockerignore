@@ -1,0 +1,32 @@
+# Ficheiro: .dockerignore
+# Localização: Na raiz do seu projeto (na mesma pasta que o docker-compose.yml)
+
+# Ignorar todos os ficheiros do Git
+.git
+.gitignore
+
+# Ignorar ficheiros de configuração de IDEs e do utilizador
+.vs
+.vscode
+*.sln.docstates
+*.user
+*.userosscache
+
+# Ignorar ficheiros de compilação e de pacotes locais
+**/bin
+**/obj
+**/node_modules
+
+# Ignorar projetos e ficheiros de teste
+**/tests/
+
+# --- A LINHA MAIS IMPORTANTE ---
+# Ignorar o global.json para garantir que o Docker use sempre
+# a versão do SDK definida no Dockerfile.
+global.json
+
+# Ignorar ficheiros do Docker que não precisam de ser copiados para a imagem
+Dockerfile
+docker-compose.yml
+.dockerignore
+README.md

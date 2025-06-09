@@ -25,7 +25,18 @@ public class VehicleRepository : IVehicleRepository
 
     public async Task<Vehicle?> GetByIdAsync(Guid id)
     {
-        return await _context.Vehicles.FindAsync(id);
+        return await _context.Vehicles
+            .AsNoTracking()
+            .Where(v => v.Id == id)
+            .Select(v => new Vehicle
+            {
+                Id = v.Id,
+                Make = v.Make,
+                Model = v.Model,
+                Year = v.Year,
+                Plate = v.Plate
+            })
+            .FirstOrDefaultAsync();
     }
 
     public async Task<IEnumerable<Vehicle>> FindByPlateAsync(string plate)
@@ -38,7 +49,6 @@ public class VehicleRepository : IVehicleRepository
 
     public void Update(Vehicle vehicle)
     {
-        // O EF Core rastreia a entidade e a marca como modificada quando SaveChanges for chamado.
         _context.Vehicles.Update(vehicle);
     }
 

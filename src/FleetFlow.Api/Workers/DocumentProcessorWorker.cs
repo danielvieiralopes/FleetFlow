@@ -51,7 +51,7 @@ public class DocumentProcessorWorker : BackgroundService
                     VehicleId = documentInfo.VehicleId,
                     FileName = documentInfo.FileName,
                     FileMimeType = documentInfo.FileMimeType,
-                    FileUrl = fileAccessUrl, // Agora salvamos a URL de acesso completa.
+                    FileUrl = fileAccessUrl,
                     CreatedAt = DateTime.UtcNow
                 };
 

@@ -1,7 +1,4 @@
-﻿// Localização: tests/FleetFlow.Tests.Integration/Vehicles/Commands/CreateVehicleTests.cs
-// (Crie as pastas necessárias dentro do projeto de teste de integração)
-
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using FleetFlow.Application.Features.Vehicles.Commands;
 using FleetFlow.Domain.Entities;

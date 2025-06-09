@@ -1,36 +1,33 @@
-using System.Text;
+using FleetFlow.Api.Workers;
 using FleetFlow.Application.Interfaces;
+using FleetFlow.Infrastructure.Messaging;
 using FleetFlow.Infrastructure.Persistence;
 using FleetFlow.Infrastructure.Persistence.Repositories;
 using FleetFlow.Infrastructure.Security;
-using FleetFlow.Infrastructure.Messaging;
 using FleetFlow.Infrastructure.Storage;
-using Minio;
-using RabbitMQ.Client;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using FleetFlow.Api.Workers;
-
+using Minio;
+using RabbitMQ.Client;
+using System.Text;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Adicionar o DbContext para injeção de dependência.
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// --- REGISTO DE SERVIÇOS ---
+
+// Adiciona o DbContext para injeção de dependência.
 builder.Services.AddDbContext<FleetFlowDbContext>(options =>
-    options.UseNpgsql(connectionString));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Configurar o cliente Minio como Singleton
-builder.Services.AddSingleton<IMinioClient>(sp =>
-{
-    var config = sp.GetRequiredService<IConfiguration>();
-    return new MinioClient()
-        .WithEndpoint(config["MinioSettings:Endpoint"])
-        .WithCredentials(config["MinioSettings:AccessKey"], config["MinioSettings:SecretKey"])
-        .Build();
-});
+// Adiciona os clientes para serviços externos (MinIO, RabbitMQ).
+builder.Services.AddSingleton<IMinioClient>(sp => new MinioClient()
+    .WithEndpoint(builder.Configuration["MinioSettings:Endpoint"])
+    .WithCredentials(builder.Configuration["MinioSettings:AccessKey"], builder.Configuration["MinioSettings:SecretKey"])
+    .Build());
 
-// Configurar a conexão do RabbitMQ como Singleton
 builder.Services.AddSingleton<IConnection>(sp =>
 {
     var factory = new ConnectionFactory()
@@ -42,40 +39,46 @@ builder.Services.AddSingleton<IConnection>(sp =>
     return factory.CreateConnection();
 });
 
-// serviços de repositório e serviços de aplicação
+// Adiciona os serviços de repositório e de aplicação.
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
+builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IStorageService, MinioStorageService>();
 builder.Services.AddScoped<IMessageBus, RabbitMqService>();
-builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
+builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+
+// Adiciona o worker como um serviço em background.
 builder.Services.AddHostedService<DocumentProcessorWorker>();
 
-// Adicionar MediatR (CQRS)
+// Adiciona o MediatR para o padrão CQRS.
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(FleetFlow.Application.Interfaces.IUserRepository).Assembly));
 
-// Adicionar Configuração de Autenticação JWT
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
+// Adiciona a configuração de autenticação JWT.
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
-        ValidAudience = builder.Configuration["JwtSettings:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Secret"]!))
-    };
-});
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
+            ValidAudience = builder.Configuration["JwtSettings:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Secret"]!))
+        };
+    });
 
+// Adiciona os controllers e configura a serialização JSON.
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    });
+
+builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
@@ -103,31 +106,25 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// Add services to the container.
-builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+// --- CONSTRUÇÃO E PIPELINE DA APLICAÇÃO ---
 
 var app = builder.Build();
 
-// Seed dos dados iniciais
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<FleetFlowDbContext>();
-    await DataSeeder.SeedAsync(dbContext);
-}
-
-// Configure the HTTP request pipeline.
+// Configura o pipeline de middleware HTTP.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+
+    // Popula a base de dados com dados iniciais apenas em desenvolvimento.
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<FleetFlowDbContext>();
+    await DataSeeder.SeedAsync(dbContext);
 }
 
 app.UseHttpsRedirection();
 
-// Adicionar middleware de autenticação e autorização
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -135,4 +132,5 @@ app.MapControllers();
 
 app.Run();
 
+// Necessário para que o projeto de testes de integração possa referenciar a API.
 public partial class Program { }
