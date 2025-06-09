@@ -1,78 +1,94 @@
-﻿FleetFlow - API de Gestão de Veículos
-API RESTful construída com .NET 8 e C# para o desafio técnico de backend. A solução permite o gerenciamento completo do ciclo de vida de veículos e seus documentos, utilizando uma arquitetura robusta, escalável e orientada a microsserviços.
+# 🚗 FleetFlow - API de Gestão de Veículos
 
-🚀 Como Executar o Projeto
-Pré-requisito: Ter o Docker Desktop instalado e em execução.
+API RESTful construída com .NET 8 e C# para o desafio técnico de backend.  
+A solução permite o gerenciamento completo do ciclo de vida de veículos e seus documentos, utilizando uma arquitetura robusta, escalável e orientada a microsserviços.
 
-Clone este repositório para a sua máquina local.
+---
 
-Abra um terminal na pasta raiz do projeto (onde se encontra o ficheiro docker-compose.yml).
+## 🚀 Como Executar o Projeto
 
-Execute o seguinte comando:
+**Pré-requisitos:**  
+- [Docker Desktop](https://www.docker.com/products/docker-desktop) instalado e em execução.
 
-docker-compose up --build
+**Passos:**
 
-Aguarde até que todos os serviços (API, Banco de Dados, RabbitMQ, MinIO) sejam construídos e iniciados.
+1. Clone este repositório:
+   ```bash
+   git clone https://github.com/seu-usuario/FleetFlow.git
+   cd FleetFlow
+   ```
 
-Acessando os Serviços
-API (Swagger UI): http://localhost:8080/swagger
+2. Execute o Docker Compose:
+   ```bash
+   docker-compose up --build
+   ```
 
-RabbitMQ Management: http://localhost:15672 (login: guest / guest)
+3. Aguarde até que todos os serviços (API, Banco de Dados, RabbitMQ, MinIO) sejam construídos e iniciados.
 
-MinIO Console: http://localhost:9001 (login: minioadmin / minioadmin)
+---
 
-🧪 Como Executar os Testes
-Para executar os testes unitários e de integração, utilize o seguinte comando na pasta raiz do projeto:
+## 🌐 Acessando os Serviços
 
+| Serviço              | URL                          | Credenciais                    |
+|----------------------|-------------------------------|--------------------------------|
+| **Swagger UI**       | [http://localhost:8080/swagger](http://localhost:8080/swagger) | — |
+| **RabbitMQ**         | [http://localhost:15672](http://localhost:15672)           | `guest / guest`               |
+| **MinIO Console**    | [http://localhost:9001](http://localhost:9001)             | `minioadmin / minioadmin`     |
+
+---
+
+## 🧪 Como Executar os Testes
+
+Execute os testes unitários e de integração com:
+
+```bash
 dotnet test
+```
 
-Nota: Os testes de integração utilizam Testcontainers e requerem que o Docker Desktop esteja em execução.
+> ⚠️ Os testes de integração utilizam [Testcontainers](https://dotnet.testcontainers.org/) e requerem que o Docker Desktop esteja em execução.
 
-🏛️ Arquitetura e Decisões de Design
-A solução foi desenvolvida utilizando Clean Architecture para garantir um sistema com baixo acoplamento, alta testabilidade e separação de responsabilidades.
+---
 
-Domain: Contém as entidades de negócio e regras puras.
+## 🏛️ Arquitetura e Decisões de Design
 
-Application: Orquestra os casos de uso, utilizando o padrão CQRS com a biblioteca MediatR.
+A solução adota **Clean Architecture**, garantindo:
 
-Infrastructure: Contém os detalhes de implementação (acesso a dados com EF Core, serviços de mensageria, etc.).
+- Baixo acoplamento
+- Alta testabilidade
+- Separação clara de responsabilidades
 
-API: O ponto de entrada da aplicação, expondo os endpoints RESTful.
+### 📁 Estrutura de Pastas
 
-O upload de ficheiros foi implementado de forma assíncrona utilizando o padrão Pre-signed URL, o que garante alta performance e escalabilidade, desacoplando a API do processo de transferência de ficheiros.
+- **Domain**: Entidades de negócio e regras puras
+- **Application**: Casos de uso e lógica de aplicação (CQRS com MediatR)
+- **Infrastructure**: Implementações técnicas (EF Core, mensageria, etc.)
+- **API**: Ponto de entrada da aplicação (endpoints RESTful)
 
-🛠️ Tecnologias Utilizadas
-Categoria
+> 💡 O upload de ficheiros é assíncrono utilizando **Pre-signed URL**, garantindo alta performance e escalabilidade.
 
-Tecnologia/Ferramenta
+---
 
-Linguagem & Framework
+## 🛠️ Tecnologias Utilizadas
 
-C# e .NET 8
+| Categoria             | Tecnologia/Ferramenta           |
+|-----------------------|----------------------------------|
+| **Linguagem & Framework** | C# e .NET 8                    |
+| **Banco de Dados**    | PostgreSQL (via Docker)          |
+| **ORM**               | Entity Framework Core            |
+| **Mensageria**        | RabbitMQ                         |
+| **Storage de Ficheiros** | MinIO                        |
+| **Testes**            | xUnit, Moq, FluentAssertions, Testcontainers |
+| **Containerização**   | Docker, Docker Compose           |
 
-Banco de Dados
+---
 
-PostgreSQL (orquestrado com Docker)
+## ✅ Desafio Concluído
 
-ORM
+Este projeto cumpre todos os **requisitos funcionais e não funcionais** do desafio, incluindo:
 
-Entity Framework Core
+- Implementação de testes unitários e de integração
+- Upload assíncrono com URL assinada
+- Utilização de Clean Architecture
+- Estrutura escalável e de fácil manutenção
 
-Mensageria
-
-RabbitMQ (orquestrado com Docker)
-
-Storage de Ficheiros
-
-MinIO (orquestrado com Docker)
-
-Testes
-
-xUnit, Moq, FluentAssertions, Testcontainers
-
-Containerização
-
-Docker e Docker Compose
-
-✅ Desafio Concluído
-Este projeto cumpre todos os requisitos funcionais e não funcionais do desafio, incluindo a implementação de testes unitários e de integração, e a utilização de uma arquitetura limpa e escalável.
+---
