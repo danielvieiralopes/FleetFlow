@@ -14,7 +14,7 @@ A solução permite o gerenciamento completo do ciclo de vida de veículos e seu
 
 1. Clone este repositório:
    ```bash
-   git clone https://github.com/seu-usuario/FleetFlow.git
+   git clone https://github.com/danielvieiralopes/FleetFlow.git
    cd FleetFlow
    ```
 
